@@ -9,5 +9,8 @@
   "peerDependencies": {
     "typescript": "^5"
   },
-  "workspaces":["packages/*"]
+  "workspaces": ["packages/*"],
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  }
 }
