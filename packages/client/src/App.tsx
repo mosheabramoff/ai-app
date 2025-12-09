@@ -1,10 +1,13 @@
 import './App.css';
-import ChatBot from './components/ChatBot';
+import 'react-loading-skeleton/dist/skeleton.css';
+// import ChatBot from './components/chat/ChatBot';
+import ReviewList from './components/reviews/ReviewList';
 
 function App() {
    return (
       <div className="p-4 h-screen w-full">
-         <ChatBot />
+         {/* <ChatBot /> */}
+         <ReviewList productId={2} />
       </div>
    );
 }
