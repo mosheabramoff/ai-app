@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import StarRating from './StarRating';
-import Skeleton from 'react-loading-skeleton';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Button } from '../ui/button';
+import { HiSparkles } from 'react-icons/hi2';
+import ReviewSkeleton from './ReviewSkeleton';
+
 type Props = {
    productId: number;
 };
@@ -20,6 +23,10 @@ type GetReviewsResponse = {
    reviews: Review[];
 };
 
+type SummarizeResponse = {
+   summary: string;
+};
+
 const ReviewList = ({ productId }: Props) => {
    const {
       data: reviewData,
@@ -27,23 +34,37 @@ const ReviewList = ({ productId }: Props) => {
       error,
    } = useQuery<GetReviewsResponse>({
       queryKey: ['reviews', productId],
-      queryFn: async () => {
-         const { data } = await axios.get<GetReviewsResponse>(
-            `/api/products/${productId}/reviews`
-         );
-         return data;
-      },
+      queryFn: () => fetchReviews(),
    });
+
+   const {
+      mutate: handleSummarize,
+      isPending: isSummarizing,
+      isError: isSummarizeError,
+      data: summarizeResponse,
+   } = useMutation<SummarizeResponse>({
+      mutationFn: () => summarizeReviews(),
+   });
+
+   const fetchReviews = async () => {
+      const { data } = await axios.get<GetReviewsResponse>(
+         `/api/products/${productId}/reviews`
+      );
+      return data;
+   };
+
+   const summarizeReviews = async () => {
+      const { data } = await axios.post<SummarizeResponse>(
+         `/api/products/${productId}/reviews/summarize`
+      );
+      return data;
+   };
 
    if (isLoading) {
       return (
          <div className="flex flex-col gap-5">
             {[1, 2, 3].map((i) => (
-               <div key={i}>
-                  <Skeleton width={150} />
-                  <Skeleton width={100} />
-                  <Skeleton count={2} />
-               </div>
+               <ReviewSkeleton key={i} />
             ))}
          </div>
       );
@@ -53,17 +74,52 @@ const ReviewList = ({ productId }: Props) => {
       return <div className="text-red-500">{error.message}</div>;
    }
 
+   if (!reviewData || reviewData.reviews.length === 0) {
+      return <div>No reviews available.</div>;
+   }
+
+   const currentSummary = summarizeResponse?.summary || reviewData.summary;
+
    return (
-      <div className="flex flex-col gap-5">
-         {reviewData?.reviews.map((review) => (
-            <div key={review.id}>
-               <div className="font-semibold">{review.author}</div>
+      <div>
+         <div className="mb-5">
+            <h2 className="text-2xl font-bold mb-2">Reviews</h2>
+            {currentSummary ? (
+               <div className="italic text-gray-600">{currentSummary}</div>
+            ) : (
                <div>
-                  <StarRating value={review.rating} />
+                  <Button
+                     onClick={() => handleSummarize()}
+                     className="cursor-pointer"
+                     disabled={isSummarizing}
+                  >
+                     <HiSparkles />
+                     Summarize
+                  </Button>
+                  {isSummarizing && (
+                     <div className="py-3">
+                        <ReviewSkeleton />
+                     </div>
+                  )}
+                  {isSummarizeError && (
+                     <div className="text-red-500 mt-2">
+                        Failed to summarize reviews. Please try again.
+                     </div>
+                  )}
                </div>
-               <p className="py-2">{review.content}</p>
-            </div>
-         ))}
+            )}
+         </div>
+         <div className="flex flex-col gap-5">
+            {reviewData?.reviews.map((review) => (
+               <div key={review.id}>
+                  <div className="font-semibold">{review.author}</div>
+                  <div>
+                     <StarRating value={review.rating} />
+                  </div>
+                  <p className="py-2">{review.content}</p>
+               </div>
+            ))}
+         </div>
       </div>
    );
 };
