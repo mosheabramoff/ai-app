@@ -1,66 +1,30 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import StarRating from './StarRating';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button } from '../ui/button';
 import { HiSparkles } from 'react-icons/hi2';
 import ReviewSkeleton from './ReviewSkeleton';
+import {
+   reviewApi,
+   type GetReviewsResponse,
+   type SummarizeResponse,
+} from './ReviewApi';
 
 type Props = {
    productId: number;
 };
 
-type Review = {
-   id: number;
-   author: string;
-   content: string;
-   rating: number;
-   createdAt: string;
-};
-
-type GetReviewsResponse = {
-   summary: string | null;
-   reviews: Review[];
-};
-
-type SummarizeResponse = {
-   summary: string;
-};
-
 const ReviewList = ({ productId }: Props) => {
-   const {
-      data: reviewData,
-      isLoading,
-      error,
-   } = useQuery<GetReviewsResponse>({
+   const reviewsQuery = useQuery<GetReviewsResponse>({
       queryKey: ['reviews', productId],
-      queryFn: () => fetchReviews(),
+      queryFn: () => reviewApi.fetchReviews(productId),
    });
 
-   const {
-      mutate: handleSummarize,
-      isPending: isSummarizing,
-      isError: isSummarizeError,
-      data: summarizeResponse,
-   } = useMutation<SummarizeResponse>({
-      mutationFn: () => summarizeReviews(),
+   const summaryMutation = useMutation<SummarizeResponse>({
+      mutationFn: () => reviewApi.summarizeReviews(productId),
    });
 
-   const fetchReviews = async () => {
-      const { data } = await axios.get<GetReviewsResponse>(
-         `/api/products/${productId}/reviews`
-      );
-      return data;
-   };
-
-   const summarizeReviews = async () => {
-      const { data } = await axios.post<SummarizeResponse>(
-         `/api/products/${productId}/reviews/summarize`
-      );
-      return data;
-   };
-
-   if (isLoading) {
+   if (reviewsQuery.isLoading) {
       return (
          <div className="flex flex-col gap-5">
             {[1, 2, 3].map((i) => (
@@ -70,16 +34,16 @@ const ReviewList = ({ productId }: Props) => {
       );
    }
 
-   if (error) {
-      return <div className="text-red-500">{error.message}</div>;
+   if (reviewsQuery.isError) {
+      return <div className="text-red-500">{reviewsQuery.error.message}</div>;
    }
 
-   if (!reviewData || reviewData.reviews.length === 0) {
+   if (!reviewsQuery.data || reviewsQuery.data.reviews.length === 0) {
       return <div>No reviews available.</div>;
    }
 
-   const currentSummary = summarizeResponse?.summary || reviewData.summary;
-
+   const currentSummary =
+      summaryMutation.data?.summary || reviewsQuery.data.summary;
    return (
       <div>
          <div className="mb-5">
@@ -89,19 +53,19 @@ const ReviewList = ({ productId }: Props) => {
             ) : (
                <div>
                   <Button
-                     onClick={() => handleSummarize()}
+                     onClick={() => summaryMutation.mutate()}
                      className="cursor-pointer"
-                     disabled={isSummarizing}
+                     disabled={summaryMutation.isPending}
                   >
                      <HiSparkles />
                      Summarize
                   </Button>
-                  {isSummarizing && (
+                  {summaryMutation.isPending && (
                      <div className="py-3">
                         <ReviewSkeleton />
                      </div>
                   )}
-                  {isSummarizeError && (
+                  {summaryMutation.isError && (
                      <div className="text-red-500 mt-2">
                         Failed to summarize reviews. Please try again.
                      </div>
@@ -110,7 +74,7 @@ const ReviewList = ({ productId }: Props) => {
             )}
          </div>
          <div className="flex flex-col gap-5">
-            {reviewData?.reviews.map((review) => (
+            {reviewsQuery.data?.reviews.map((review) => (
                <div key={review.id}>
                   <div className="font-semibold">{review.author}</div>
                   <div>
