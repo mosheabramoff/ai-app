@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import StarRating from './StarRating';
 import Skeleton from 'react-loading-skeleton';
+import { useQuery } from '@tanstack/react-query';
 type Props = {
    productId: number;
 };
@@ -20,28 +21,19 @@ type GetReviewsResponse = {
 };
 
 const ReviewList = ({ productId }: Props) => {
-   const [reviewData, setReviewData] = useState<GetReviewsResponse>();
-   const [isLoading, setIsLoading] = useState(true);
-   const [error, setError] = useState<string | null>(null);
-
-   const fetchReviews = async () => {
-      try {
-         setIsLoading(true);
+   const {
+      data: reviewData,
+      isLoading,
+      error,
+   } = useQuery<GetReviewsResponse>({
+      queryKey: ['reviews', productId],
+      queryFn: async () => {
          const { data } = await axios.get<GetReviewsResponse>(
             `/api/products/${productId}/reviews`
          );
-         setReviewData(data);
-      } catch (error) {
-         console.error('Error fetching reviews:', error);
-         setError('Failed to load reviews.');
-      } finally {
-         setIsLoading(false);
-      }
-   };
-
-   useEffect(() => {
-      fetchReviews();
-   }, []);
+         return data;
+      },
+   });
 
    if (isLoading) {
       return (
@@ -58,7 +50,7 @@ const ReviewList = ({ productId }: Props) => {
    }
 
    if (error) {
-      return <div className="text-red-500">{error}</div>;
+      return <div className="text-red-500">{error.message}</div>;
    }
 
    return (
