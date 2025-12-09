@@ -15,9 +15,13 @@ export const reviewController = {
          return res.status(404).json({ error: 'Product not found' });
       }
 
-      const reviews = await reviewService.getReviews(productId);
+      const reviews = await reviewRepository.getReviews(productId);
+      const summary = await reviewRepository.getReviewSummary(productId);
 
-      res.json(reviews);
+      res.json({
+         summary,
+         reviews,
+      });
    },
    async summarizeReviews(req: Request, res: Response) {
       const productId = Number(req.params.id);
