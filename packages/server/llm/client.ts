@@ -1,8 +1,11 @@
 import OpenAI from 'openai';
+import { Ollama } from 'ollama';
 import { InferenceClient } from '@huggingface/inference';
 import summarizePrompt from '../llm/prompts/summarize-reviews.txt';
 
 const inferenceClient = new InferenceClient(process.env.HF_TOKEN);
+
+const ollamaClient = new Ollama();
 
 const openAIClient = new OpenAI({
    apiKey: process.env.OPENAI_API_KEY,
@@ -46,8 +49,8 @@ export const llmClient = {
       };
    },
    async summarizeReviews(reviews: string): Promise<string> {
-      const chatCompletion = await inferenceClient.chatCompletion({
-         model: 'meta-llama/Llama-3.1-8B-Instruct:novita',
+      const response = await ollamaClient.chat({
+         model: 'tinyllama',
          messages: [
             {
                role: 'system',
@@ -59,6 +62,6 @@ export const llmClient = {
             },
          ],
       });
-      return chatCompletion?.choices[0]?.message.content || '';
+      return response.message.content;
    },
 };
